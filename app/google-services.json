@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "606067068506",
+    "project_id": "smsapp-83f80",
+    "storage_bucket": "smsapp-83f80.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:606067068506:android:40e15ab9cc6faf2bfa1263",
+        "android_client_info": {
+          "package_name": "com.photocleaner.smsapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyARZfCE-hSC8ulLvrhMuXe5F3G0n1uSHfQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
