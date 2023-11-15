@@ -175,11 +175,7 @@ public class AdsFragmrnt extends Fragment {
                 Random random = new Random();
                 int invoice = random.nextInt(9999);
                 BkashPayment payement = new BkashPayment(total_price, String.valueOf(invoice),getContext());
-                try {
-                    payement.GenerateToken();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+                payement.GenerateToken();
             }
         });
 

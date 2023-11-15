@@ -264,7 +264,7 @@ public class HomeFragment extends Fragment {
                 body.setError("Massage more than 150 Characters");
                 return;
             }
-            sendNumber = "88"+number.getText().toString().trim();
+            sendNumber = number.getText().toString().trim();
             if (TextUtils.isEmpty(sendNumber)){
                 number.setError("Write a Phone Number");
                 return;
@@ -332,14 +332,6 @@ public class HomeFragment extends Fragment {
                     Object value = data.getValue();
                     map.put(key, value);
                 }
-                if (map.get("imei") == null){
-                    new UserInfo().getUserInfo(context);
-                }
-                TelephonyManager tm = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
-                @SuppressLint("HardwareIds") String imei = tm.getDeviceId();
-                if (!imei.equals(String.valueOf(map.get("imei")))){
-                    new UserInfo().getUserInfo(context);
-                }
                 String balance = String.valueOf(map.get("balance"));
                  sms = Double.parseDouble(balance);
                 System.out.println("sms balance(current user): "+sms);
@@ -356,68 +348,58 @@ public class HomeFragment extends Fragment {
 
     public void volley(String number, String message, String uid){
         if (message.length() > 150){
-            getActivity().finishAffinity();
+            dialogShow("Message length up to 150 character");
         }else {
 
-            // Create the JSON object for the request payload
+            try {
+                JSONObject jsonBody = new JSONObject();
+                jsonBody.put("uid", uid);
+                jsonBody.put("number", number);
+                jsonBody.put("text", message);
 
-            // Create the Volley request
-            StringRequest request = new StringRequest(Request.Method.POST, apiUrl,
-                    new Response.Listener<String>() {
-                        @Override
-                        public void onResponse(String response) {
-                            System.out.println(response);
-                            SmsReportData reportData = gson.fromJson(response, SmsReportData.class);
-                            if (reportData.isError()){
-                                sendStatus = "failed";
-                                System.out.println(reportData.getError_message());
-                                new DataSend().data( message + " " + number + " " + time );
-                                Toast.makeText(context,sendStatus, Toast.LENGTH_SHORT).show();
-                            }else {
-                                sms = sms - 1;
-                                new DataSend().newBalance(String.valueOf(sms));
-                                sendStatus = "success";
-                                System.out.println(reportData.getMessage_id());
-                                System.out.println(reportData.getMessage());
-                                Toast.makeText(context,sendStatus, Toast.LENGTH_SHORT).show();
-                                new DataSend().data( message + " " + number + " " + time );
+                String url = apiUrl+"/smsapi/send_sms";
+                JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
+                        Request.Method.POST,
+                        url,
+                        jsonBody,
+                        new Response.Listener<JSONObject>() {
+                            @Override
+                            public void onResponse(JSONObject response) {
+                                // Handle the response here
+                                SmsReportData reportData = gson.fromJson(response.toString(), SmsReportData.class);
+                                if (reportData.isError()){
+                                    sendStatus = "failed";
+                                }else {
+                                    sendStatus = "success";
+                                }
+                                SmsData data = new SmsData(sendNumber, messageBody, time, sendStatus);
+                                Collections.reverse(list);
+                                list.add(data);
+                                list1 = list;
+
+                                Collections.reverse(list);
+                                customAdapter.notifyDataSetChanged();
+                                progressDialog.dismiss();
                             }
-                            SmsData data = new SmsData(sendNumber, messageBody, time, sendStatus);
-                            Collections.reverse(list);
-                            list.add(data);
-                            list1 = list;
+                        },
+                        new Response.ErrorListener() {
+                            @Override
+                            public void onErrorResponse(VolleyError error) {
+                                System.out.println(error);
+                                // Handle errors here
+                                System.out.println("Error: " + error.getMessage());
+                                progressDialog.dismiss();
+                                Toast.makeText(getContext(), "fail : "+error.getMessage(), Toast.LENGTH_SHORT).show();
+                            }
+                        });
 
-                            Collections.reverse(list);
-                            customAdapter.notifyDataSetChanged();
-                            progressDialog.dismiss();
-                        }
-                    },
-                    new Response.ErrorListener() {
-                        @Override
-                        public void onErrorResponse(VolleyError error) {
-                            // Handle the error response
-                            System.out.println(error.getMessage());
-                        }
-                    }){
+                // Add the request to the RequestQueue.
+                RequestQueue queue = Volley.newRequestQueue(context);
+                queue.add(jsonObjectRequest);
 
-                @Override
-                public String getPostBodyContentType() {
-                    return "application/json; charset=UTF-8";
-                }
-
-                @Override
-                public byte[] getPostBody() throws AuthFailureError {
-                    String smsBody ="{\"number\":" +number+ "\"text\": "+message+" \"uid\": " + uid+" }";
-                    return smsBody.getBytes();
-                }
-            };
-
-
-            // Create a Volley request queue
-            RequestQueue requestQueue = Volley.newRequestQueue(context); // 'this' refers to the current context
-
-            // Add the request to the queue
-            requestQueue.add(request);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
         }
     }
 

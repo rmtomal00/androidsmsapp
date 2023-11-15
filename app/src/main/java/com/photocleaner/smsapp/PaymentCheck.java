@@ -18,9 +18,14 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 import com.google.gson.Gson;
 
+import org.jetbrains.annotations.NotNull;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -33,9 +38,17 @@ import okhttp3.Response;
 public class PaymentCheck extends AppCompatActivity {
 
     TextView textView;
-    String s,k;
+    String s = "payment error",k;
+
+    private String apiUrl = BuildConfig.apiUrl;
 
     private ProgressDialog progressDialog;
+
+    private OkHttpClient client = new OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .build();
     double smsBalance;
 
     @Override
@@ -43,7 +56,6 @@ public class PaymentCheck extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_payment_check);
         textView = findViewById(R.id.listenerPayment);
-        k = "Xo6qI5MycKaXAcjjhVH7Ay2ptc";
 
         progressDialog = new ProgressDialog(this);
         progressDialog.setTitle("Loading...");
@@ -51,96 +63,68 @@ public class PaymentCheck extends AppCompatActivity {
         progressDialog.create();
         progressDialog.show();
 
+        String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
+
         Intent intent = getIntent();
         String paymentID = intent.getStringExtra("paymentID");
         System.out.println(paymentID);
         String token = intent.getStringExtra("token");
         System.out.println(token);
 
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        readUserData(user.getUid());
+        JSONObject json = new JSONObject();
+        try {
+            json.put("paymentID", paymentID);
+            json.put("idToken", token);
+            json.put("uid", uid);
+        } catch (JSONException e) {
+            throw new RuntimeException(e);
+        }
 
-        OkHttpClient client = new OkHttpClient();
+        RequestBody body = RequestBody.create(String.valueOf(json), MediaType.get("application/json"));
 
-        MediaType mediaType = MediaType.parse("application/json");
-        RequestBody body = RequestBody.create(mediaType, "{paymentID:" + paymentID + "}");
         Request request = new Request.Builder()
-                .url("https://tokenized.pay.bka.sh/v1.2.0-beta/tokenized/checkout/execute")
                 .post(body)
+                .url(apiUrl+"/bkashApi/execute")
                 .build();
 
         client.newCall(request).enqueue(new Callback() {
             @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
                 System.out.println(e.getMessage());
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        textView.setText(s);
+                        textView.setTextColor(Color.GREEN);
+                        progressDialog.dismiss();
+                    }
+                });
             }
 
             @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                //System.out.println(response.body().string());
-                Gson g = new Gson();
-                SuccessfullCheckerModel model = g.fromJson(response.body().string(), SuccessfullCheckerModel.class);
-                if (model.getStatusCode().equals("0000")){
+            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                String res = response.body().string();
+                System.out.println(res);
 
-                    double newBalance =  smsBalance + (Double.parseDouble(model.getAmount()) / 0.25);
-                    System.out.println(newBalance);
-                    new DataSend().newBalance(String.valueOf(newBalance));
-                     s = "Payment Status: " + model.getStatusMessage() + "\n"
-                                + "Payment ID: " + model.getPaymentID() + "\n"
-                                + "Customer Bkash: " + model.getCustomerMsisdn() + "\n"
-                                + "TrxID : " + model.getTrxID() + "\n"
-                                + "Payment Amount: " + model.getAmount() +" " + model.getCurrency() + "\n"
-                                + "Transaction Status: " + model.getTransactionStatus() + "\n"
-                                + "Payment Time: " + model.getPaymentExecuteTime() + "\n"
-                                + "Payment Invoice: " + model.getMerchantInvoiceNumber() + "\n";
-
-                     runOnUiThread(new Runnable() {
-                         @Override
-                         public void run() {
-                             textView.setText(s);
-                             textView.setTextColor(Color.GREEN);
-                             progressDialog.dismiss();
-                         }
-                     });
-
-                }else {
-                    s = "Payment Status: " + model.getStatusMessage();
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            textView.setText(s);
-                            textView.setTextColor(Color.RED);
-                            progressDialog.dismiss();
-                        }
-                    });
+                JSONObject object;
+                try {
+                    object = new JSONObject(res);
+                } catch (JSONException e) {
+                    throw new RuntimeException(e);
                 }
-            }
-
-        });
-
-
-
-    }
-
-    private void readUserData(String uid) {
-
-        DatabaseReference reference = FirebaseDatabase.getInstance().getReference("users");
-        reference.child(uid).addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                Map<String, Object> map = new HashMap<>();
-                for (DataSnapshot data : snapshot.getChildren()) {
-                    String key = data.getKey();
-                    Object value = data.getValue();
-                    map.put(key, value);
+                try {
+                    s = object.get("statusMessage").toString();
+                } catch (JSONException e) {
+                    throw new RuntimeException(e);
                 }
-                String balance1 = String.valueOf(map.get("balance"));
-                smsBalance = Double.parseDouble(balance1);
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                System.out.println(error.getMessage());
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        textView.setText(s);
+                        textView.setTextColor(Color.GREEN);
+                        progressDialog.dismiss();
+                    }
+                });
             }
         });
     }

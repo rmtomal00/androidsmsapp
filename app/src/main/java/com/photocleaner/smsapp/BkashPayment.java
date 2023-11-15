@@ -8,7 +8,12 @@ import androidx.annotation.NonNull;
 
 import com.google.gson.Gson;
 
+import org.jetbrains.annotations.NotNull;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -21,8 +26,14 @@ import okhttp3.Response;
 public class BkashPayment {
 
     Gson gson = new Gson();
+    private final String apiUrl = BuildConfig.apiUrl;
 
     private String amount, invoice;
+    private final OkHttpClient client = new OkHttpClient.Builder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .writeTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .build();
 
     private Context context;
 
@@ -32,22 +43,34 @@ public class BkashPayment {
         this.context = context;
     }
 
-    public void GenerateToken() throws IOException {
-        OkHttpClient client = new OkHttpClient();
-
+    public void GenerateToken() {
         Request request = new Request.Builder()
-                .url("https://tokenized.pay.bka.sh/v1.2.0-beta/tokenized/checkout/token/grant")
+                .url(apiUrl+"/bkashApi/generateToken")
                 .get()
                 .build();
 
         client.newCall(request).enqueue(new Callback() {
             @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) {
-
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
+                System.out.println(e.getMessage());
+                System.out.println(e.getMessage());
             }
 
             @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                String res = response.body().string();
+                System.out.println(res);
+                String token;
+                JSONObject jsonObject;
+                try {
+                    jsonObject = new JSONObject(res);
+                    System.out.println(jsonObject.get("idToken"));
+                    token = jsonObject.get("idToken").toString();
+
+                } catch (JSONException e) {
+                    throw new RuntimeException(e);
+                }
+                createPayment(token);
 
             }
         });
@@ -59,45 +82,47 @@ public class BkashPayment {
     }
 
     private void createPayment(String idToken) throws IOException {
-        OkHttpClient client = new OkHttpClient();
 
-        PaymentDataModel paymentDataModel = new PaymentDataModel("0011",
-                "Pay Now",
-                "https://www.google.com",
-                amount,
-                "BDT",
-                "sale",
-                invoice);
-        String paymentData = gson.toJson(paymentDataModel);
-        System.out.println(paymentData);
+        String jsonString = "{\"idToken\":\""+idToken+"\", \"amount\":\""+amount+"\", \"invoice\":\""+invoice+"\"}";
 
-        MediaType mediaType = MediaType.parse("application/json");
-        RequestBody body = RequestBody.create(mediaType, paymentData);
+        RequestBody requestBody = RequestBody.create(jsonString, MediaType.get("application/json"));
         Request request = new Request.Builder()
-                .url("https://tokenized.pay.bka.sh/v1.2.0-beta/tokenized/checkout/create")
-                .post(body)
+                .post(requestBody)
+                .url(apiUrl+"/bkashApi/createPayment")
                 .build();
 
         client.newCall(request).enqueue(new Callback() {
             @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) {
-
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
+                System.out.println(e.getMessage());
             }
 
             @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                //System.out.println(response.body().string());
-                ModelClass modelClass = gson.fromJson(response.body().string(), ModelClass.class);
+            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                String res = response.body().string();
+                System.out.println(res);
+                String bkashURL = null, paymentID = null, token = null;
+                try {
+                    JSONObject object = new JSONObject(res);
+                    if (object.get("statusCode").equals("0000")){
+                        bkashURL = object.get("bkashURL").toString();
+                        paymentID = object.get("paymentID").toString();
+                        token = object.get("idToken").toString();
+                    }else {
+                        System.out.println("api data error " + object.get("message"));
+                    }
+                } catch (JSONException e) {
+                    throw new RuntimeException(e);
+                }
 
-                System.out.println(modelClass.getBkashURL());
-                System.out.println(modelClass.getPaymentID());
-                if (modelClass.getBkashURL() != null){
+                if (bkashURL != null){
                     Intent intent = new Intent(context, WebViewUrl.class);
-                    intent.putExtra("URL", modelClass.getBkashURL());
-                    intent.putExtra("paymentID", modelClass.getPaymentID());
-                    intent.putExtra("token", idToken);
+                    intent.putExtra("URL", bkashURL);
+                    intent.putExtra("paymentID", paymentID);
+                    intent.putExtra("token", token);
                     context.startActivity(intent);
                 }
+
             }
         });
 
