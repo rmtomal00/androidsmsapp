@@ -40,6 +40,7 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import com.android.volley.AuthFailureError;
+import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
@@ -394,6 +395,7 @@ public class HomeFragment extends Fragment {
                         });
 
                 // Add the request to the RequestQueue.
+                jsonObjectRequest.setRetryPolicy(new DefaultRetryPolicy(5000, 1, 1.0f));
                 RequestQueue queue = Volley.newRequestQueue(context);
                 queue.add(jsonObjectRequest);
 
