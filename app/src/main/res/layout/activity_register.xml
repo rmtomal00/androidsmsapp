@@ -92,6 +92,7 @@
         android:padding="6dp"
         android:text="Forget Password"
         android:textSize="16dp"
+        android:id="@+id/fprgetpassword2"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.498"

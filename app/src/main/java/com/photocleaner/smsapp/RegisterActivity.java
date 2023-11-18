@@ -3,7 +3,9 @@ package com.photocleaner.smsapp;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -44,6 +46,10 @@ public class RegisterActivity extends AppCompatActivity {
         progressDialog.setCancelable(false);
         progressDialog.setMessage("Account creating");
         progressDialog.create();
+
+        binding.fprgetpassword2.setOnClickListener(v->{
+            startActivity(new Intent(this, ForgetPasswordActivity.class));
+        });
 
         binding.signupRegister.setOnClickListener(v->{
             progressDialog.show();
@@ -109,5 +115,6 @@ public class RegisterActivity extends AppCompatActivity {
             }
         });
     }
+
 
 }

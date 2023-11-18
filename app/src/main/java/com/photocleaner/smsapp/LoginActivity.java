@@ -40,6 +40,10 @@ public class LoginActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         context = this;
 
+        binding.forgetPassLogin.setOnClickListener( view->{
+            startActivity(new Intent(this, ForgetPasswordActivity.class));
+        });
+
         //permission
         checkPermission();
 
@@ -63,11 +67,6 @@ public class LoginActivity extends AppCompatActivity {
         //create account
         binding.registerLogin.setOnClickListener( view->{
             startActivity(new Intent(this, RegisterActivity.class));
-        });
-
-        //forget password
-        binding.forgetPassLogin.setOnClickListener(view->{
-
         });
 
     }
