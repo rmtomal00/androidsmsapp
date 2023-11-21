@@ -6,6 +6,7 @@ import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -27,6 +28,7 @@ public class LoginActivity extends AppCompatActivity {
 
     private ActivityLoginBinding binding;
     private FirebaseAuth mAuth;
+    private ProgressDialog progressDialog;
 
     Context context;
 
@@ -36,6 +38,13 @@ public class LoginActivity extends AppCompatActivity {
         binding = ActivityLoginBinding.inflate(getLayoutInflater());
         View v = binding.getRoot();
         setContentView(v);
+
+        progressDialog = new ProgressDialog(this);
+        progressDialog.setMessage("Please wait...");
+        progressDialog.setCancelable(false);
+        progressDialog.setTitle("Loading");
+        progressDialog.create();
+
 
         mAuth = FirebaseAuth.getInstance();
         context = this;
@@ -49,16 +58,17 @@ public class LoginActivity extends AppCompatActivity {
 
         //login
         binding.loginButton.setOnClickListener(view->{
-            String email = binding.emailLogin.getText().toString().trim();
+            progressDialog.show();
+            String email = binding.emailLogin0.getText().toString().trim();
             String password = binding.passwordLogin.getText().toString().trim();
             if (TextUtils.isEmpty(email)){
-            binding.emailLogin.setError("Empty");
+            binding.emailLogin0.setError("Empty");
             return;
             }
             if (TextUtils.isEmpty(password)){
                 binding.passwordLogin.setError("Empty");
             }else if (password.length() < 6){
-                binding.emailLogin.setError("Minimum need 6 character");
+                binding.emailLogin0.setError("Minimum need 6 character");
                 return;
             }
             loginWithPassword(email, password);
@@ -78,7 +88,9 @@ public class LoginActivity extends AppCompatActivity {
                     public void onComplete(@NonNull Task<AuthResult> task) {
                         if (task.isSuccessful()){
                             updateUi();
+                            progressDialog.dismiss();
                         }else {
+                            progressDialog.dismiss();
                             Toast.makeText(LoginActivity.this, ""+task.getException().getMessage(), Toast.LENGTH_SHORT).show();
                         }
                     }

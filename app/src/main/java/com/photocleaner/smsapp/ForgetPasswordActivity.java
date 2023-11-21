@@ -1,6 +1,7 @@
 package com.photocleaner.smsapp;
 
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -23,6 +24,7 @@ public class ForgetPasswordActivity extends AppCompatActivity {
 
     private ActivityForgetPasswordBinding binding;
     String emailaddress;
+    private ProgressDialog progressDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,6 +33,12 @@ public class ForgetPasswordActivity extends AppCompatActivity {
         View view = binding.getRoot();
         EdgeToEdge.enable(this);
         setContentView(view);
+
+        progressDialog = new ProgressDialog(this);
+        progressDialog.setMessage("Please wait...");
+        progressDialog.setCancelable(false);
+        progressDialog.setTitle("Loading");
+        progressDialog.create();
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
@@ -39,12 +47,13 @@ public class ForgetPasswordActivity extends AppCompatActivity {
         binding.forgetPasswordButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (TextUtils.isEmpty(binding.emailAddress0.getText().toString().trim())){
-                    binding.emailAddress0.setError("Empty");
+                if (TextUtils.isEmpty(binding.emailAddressForgetpassword.getText().toString().trim())){
+                    binding.emailAddressForgetpassword.setError("Empty");
                     return;
                 }
 
-                forgetpassword(binding.emailAddress0.getText().toString().trim());
+                progressDialog.show();
+                forgetpassword(binding.emailAddressForgetpassword.getText().toString().trim());
             }
         });
     }
@@ -55,6 +64,10 @@ public class ForgetPasswordActivity extends AppCompatActivity {
             public void onComplete(@NonNull Task<Void> task) {
                 if (task.isSuccessful()){
                     dialogShow("We send a email in your account.");
+                    progressDialog.dismiss();
+                }else {
+                    progressDialog.dismiss();
+                    dialogShow("You have no account");
                 }
             }
         });
